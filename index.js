@@ -2,7 +2,7 @@ const express = require('express');
 const fileUpload = require('express-fileupload');
 const mongoose = require('mongoose');
 const connectDB = require('./config/db');
-const employer = require('./models/employer');
+const employer = require('./models/companyProfile');
 
 
 const app = express();

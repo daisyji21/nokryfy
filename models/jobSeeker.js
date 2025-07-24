@@ -22,11 +22,11 @@ const jobSeekerSchema = new mongoose.Schema({
   skills: [String],
   jobprofile: {
     type: String,
-    required: true // ✅ Fixed
+    required: true //
   },
   resume: {
     type: String,
-    required: true // ✅ Fixed
+    required: true // 
   }
 });
 

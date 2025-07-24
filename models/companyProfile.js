@@ -1,6 +1,10 @@
 const mongoose = require('mongoose');
-const employer = require('./employer');
+const employer = require('./companyProfile');
 const employerSchema = new mongoose.Schema({
+  userId: {
+    type: String,
+   
+  },
     name:{type:String ,required:true} ,
     companyName: {type:String ,required:true} ,
     email:{

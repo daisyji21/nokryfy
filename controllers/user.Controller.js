@@ -92,21 +92,103 @@ const getUserById = async (req, res) => {
 };
 
 // Update User
-const updateUser = async (req, res) => {
+// const updateUser = async (req, res) => {
+//   try {
+//     const updatedUser = await User.findByIdAndUpdate(
+//       req.params.id,
+//       req.body,
+//       { new: true }
+//     );
+
+//     if (!updatedUser) return res.status(404).json({ success: false, message: 'User not found' });
+
+//     res.json({ success: true, message: "User updated successfully", data: updatedUser });
+//   } catch (err) {
+//     res.status(400).json({ success: false, message: err.message });
+//   }
+// };
+
+
+// Update User Profile Controller (email can't be updated)
+// const updateUserProfile = async (req, res) => {
+//   try {
+//        const userIdParam = req.params.userId;
+//     const updateData = { ...req.body };
+
+//     // Prevent email from being updated
+//     if (updateData.email) {
+//       delete updateData.email;
+//     }
+
+//     // Update profileLastUpdated.updateAt timestamp
+//     updateData['profileLastUpdated.updateAt'] = new Date();
+
+//     // Find user and update
+//     const updatedUser = await User.findByIdAndUpdate(
+// { userId: userIdParam },
+//       { $set: updateData },
+//       { new: true, runValidators: true }
+//     );
+
+//     if (!updatedUser) {
+//       return res.status(404).json({ message: "User not found" });
+//     }
+
+// //     //remove password from response
+//  const userObj = updatedUser.toJSON();
+// //     delete userObj.password;
+//     return res.status(200).json({success:true,
+//       message: "User profile updated successfully",
+       
+//         user: updatedUser.toJSON()
+      
+
+      
+//     });
+//   } catch (err) {
+//     console.error(err);
+//     return res.status(500).json({ message: "Server Error", error: err.message });
+//   }
+// };
+const updateUserProfile = async (req, res) => {
   try {
-    const updatedUser = await User.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true }
+    const userId = req.params.userId;
+    const updateData = { ...req.body };
+
+    // Prevent email from being updated
+    if (updateData.email) {
+      delete updateData.email;
+    }
+
+    // Update profileLastUpdated.updateAt timestamp
+    updateData['profileLastUpdated.updateAt'] = new Date();
+
+    // Find user by userId (UUID) and update
+    const updatedUser = await User.findOneAndUpdate(
+      { userId: userId },        // Querying by userId (UUID)
+      { $set: updateData },
+      { new: true, runValidators: true }
     );
 
-    if (!updatedUser) return res.status(404).json({ success: false, message: 'User not found' });
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
-    res.json({ success: true, message: "User updated successfully", data: updatedUser });
+    const userObj = updatedUser.toObject();
+    delete userObj.password;
+    delete userObj._id;  // 
+    return res.status(200).json({
+      success: true,
+      message: "User profile updated successfully",
+      user: userObj
+    });
   } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
+    console.error(err);
+    return res.status(500).json({ message: "Server Error", error: err.message });
   }
 };
+
+
 
 // Delete User
 const deleteUser = async (req, res) => {
@@ -140,7 +222,7 @@ module.exports = {
   loginUser,
   getUsers,
   getUserById,
-  updateUser,
+ updateUserProfile ,
   deleteUser,
   listUsers,
 };
