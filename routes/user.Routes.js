@@ -9,12 +9,14 @@ const {
   getUserById,    // get user by ID
  updateUserProfile,     // update user
   deleteUser,     // delete user
-  listUsers       // admin list
+  listUsers, // admin list
+logoutUser
 } = require('../controllers/user.Controller');
 
 //  Auth Routes
 router.post('/signup', createUser);       // Register a new user
-router.post('/login', loginUser);         // Login user
+router.post('/login', loginUser);// Login user
+router.post('/logout',auth, logoutUser)
 
 // 👤 User CRUD Routes
 router.get('/',auth,  getUsers);                // Get all users

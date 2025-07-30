@@ -1,5 +1,16 @@
 const mongoose = require('mongoose');
 const employer = require('./companyProfile');
+// Embedded Job Schema
+const JobSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  description: String,
+  salary: Number,
+  location: String,
+  postedAt: {
+    type: Date,
+    default: Date.now
+  }
+});
 const employerSchema = new mongoose.Schema({
   userId: {
     type: String,
@@ -13,6 +24,7 @@ const employerSchema = new mongoose.Schema({
     phone: {
     type: String
   },
+  jobs: [JobSchema],
     numberOfVacancies: { type: Number, required: true },
   salary: { type: Number, required: true },
   isHiring: { type: Boolean, default: true },

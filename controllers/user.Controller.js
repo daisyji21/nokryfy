@@ -43,7 +43,7 @@ const loginUser = async (req, res) => {
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ success: false, message: "Invalid credentials" });
-
+//role match ?
     const token = jwt.sign(
       { userId: user._id, name: user.name, email: user.email, role: user.role },
       process.env.JWT_SECRET || "default_secret_key",
@@ -216,6 +216,21 @@ const listUsers = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+// logout
+
+const logoutUser = async (req, res) => {
+  const token = req.cookies.refreshToken;
+  if (token) {
+    await Token.deleteOne({ token });
+    res.clearCookie("refreshToken");
+  }
+ 
+  res.status(200).json({
+    success: true,
+    code: 200,
+    message: "Logged out successfully",
+  });
+};
 
 module.exports = {
   createUser,
@@ -225,4 +240,5 @@ module.exports = {
  updateUserProfile ,
   deleteUser,
   listUsers,
+  logoutUser
 };
