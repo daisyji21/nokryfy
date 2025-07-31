@@ -33,17 +33,25 @@ const createUser = async (req, res) => {
   }
 };
 
-// Login User
+//      Login User
 const loginUser = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password,role } = req.body;
 
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ success: false, message: "User not found" });
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ success: false, message: "Invalid credentials" });
-//role match ?
+//role match 
+  
+    if (role && user.role !== role) {
+      return res.status(403).json({
+        success: false,
+        message: `Access denied: '${role}' role expected, but found '${user.role}'`
+      });
+    }
+
     const token = jwt.sign(
       { userId: user._id, name: user.name, email: user.email, role: user.role },
       process.env.JWT_SECRET || "default_secret_key",
@@ -69,20 +77,10 @@ const loginUser = async (req, res) => {
   }
 };
 
-// Get All Users
-const getUsers = async (req, res) => {
-  try {
-    const users = await User.find();
-    res.json({ success: true, data: users });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-// Get User by ID
+// Get Userprofile by ID
 const getUserById = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id);
+    const user = await User.findById(req.params.userId);
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
     res.json({ success: true, data: user });
@@ -90,66 +88,16 @@ const getUserById = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
-
-// Update User
-// const updateUser = async (req, res) => {
+// // USER PROFILE
+// const getUserProfile = async (req, res) => { 
 //   try {
-//     const updatedUser = await User.findByIdAndUpdate(
-//       req.params.id,
-//       req.body,
-//       { new: true }
-//     );
-
-//     if (!updatedUser) return res.status(404).json({ success: false, message: 'User not found' });
-
-//     res.json({ success: true, message: "User updated successfully", data: updatedUser });
-//   } catch (err) {
-//     res.status(400).json({ success: false, message: err.message });
+//     const user = await User.findOne({ userId: req.user.userId });
+//     res.status(200).json({ success: true, user });
+//   } catch (error) {
+//     res.status(500).json({ success: false, message: error.message });
 //   }
 // };
-
-
-// Update User Profile Controller (email can't be updated)
-// const updateUserProfile = async (req, res) => {
-//   try {
-//        const userIdParam = req.params.userId;
-//     const updateData = { ...req.body };
-
-//     // Prevent email from being updated
-//     if (updateData.email) {
-//       delete updateData.email;
-//     }
-
-//     // Update profileLastUpdated.updateAt timestamp
-//     updateData['profileLastUpdated.updateAt'] = new Date();
-
-//     // Find user and update
-//     const updatedUser = await User.findByIdAndUpdate(
-// { userId: userIdParam },
-//       { $set: updateData },
-//       { new: true, runValidators: true }
-//     );
-
-//     if (!updatedUser) {
-//       return res.status(404).json({ message: "User not found" });
-//     }
-
-// //     //remove password from response
-//  const userObj = updatedUser.toJSON();
-// //     delete userObj.password;
-//     return res.status(200).json({success:true,
-//       message: "User profile updated successfully",
-       
-//         user: updatedUser.toJSON()
-      
-
-      
-//     });
-//   } catch (err) {
-//     console.error(err);
-//     return res.status(500).json({ message: "Server Error", error: err.message });
-//   }
-// };
+// update user profile
 const updateUserProfile = async (req, res) => {
   try {
     const userId = req.params.userId;
@@ -187,7 +135,16 @@ const updateUserProfile = async (req, res) => {
     return res.status(500).json({ message: "Server Error", error: err.message });
   }
 };
-
+// COMPANY PROFILE
+const getCompanyProfile = async (req, res) => {
+  try {
+    const user = await User.findOne({ userId: req.user.userId, role: 'employer' });
+    if (!user) return res.status(404).json({ message: 'Employer not found' });
+    res.status(200).json({ success: true, company: user.employer });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
 
 
 // Delete User
@@ -235,8 +192,10 @@ const logoutUser = async (req, res) => {
 module.exports = {
   createUser,
   loginUser,
-  getUsers,
+  //getUsers,
   getUserById,
+  // getUserProfile,
+  getCompanyProfile,
  updateUserProfile ,
   deleteUser,
   listUsers,

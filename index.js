@@ -2,7 +2,7 @@ const express = require('express');
 const fileUpload = require('express-fileupload');
 const mongoose = require('mongoose');
 const connectDB = require('./config/db');
-const employer = require('./models/companyProfile');
+// const employer = require('./models/companyProfile');
 
 
 const app = express();
@@ -24,9 +24,9 @@ app.use(cors());
 
 //Routes
 
-  app.use("/api/employers", require( "./routes/employer.Routes"));
-app.use("/api/users", require( "./routes/user.Routes"));
-app.use("/api/jobSeeker", require( "./routes/jobSeeker.Routes"))
+ // app.use("/api/employers", require( "./routes/employer.Routes"));
+app.use("/api/users", require( "./routes/user.Routes.js"));
+//app.use("/api/jobSeeker", require( "./routes/jobSeeker.Routes"))
 // start server
 const PORT = 3000;
 app.listen(PORT, () => {

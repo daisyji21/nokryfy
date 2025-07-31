@@ -1,6 +1,18 @@
 const mongoose = require('mongoose');
 const User = require('./users');
 const { v4: uuidv4 } = require('uuid'); 
+//const jobSeeker = require('./jobSeeker');
+// Embedded Job Schema
+const JobSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  description: String,
+  salary: Number,
+  location: String,
+  postedAt: {
+    type: Date,
+    default: Date.now
+  }
+}, { _id: false });
 
 const userSchema = new mongoose.Schema({
     userId: {
@@ -32,6 +44,8 @@ profileImage: {
         country: { type: String },
         pincode: { type: String }
     },
+    //jobseeker
+    jobSeeker:{
 education: {
   degree: {type:String},
   passout:String
@@ -72,8 +86,28 @@ createdAt: {
   type: Date,
   default: Date.now
 }
+    },
+    //employer specific
+      
+  employer: {
+    companyName: String,
+    numberOfVacancies: Number,
+    salary: Number,
+    isHiring: { type: Boolean, default: true },
+    jobs: [JobSchema]
+  },
 
-}); 
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+
 userSchema.set('toJSON', {
   transform: function (doc, ret, options) {
     //  ret.userId = ret._id;
