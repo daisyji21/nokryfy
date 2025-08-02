@@ -2,145 +2,145 @@ const User = require("../models/users");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
+const sendError = (res, code, message, details = null) => {
+  res.status(code).json({
+    code,
+    success: false,
+    message,
+    data: null,
+    ...(details && { details }),
+  });
+};
+
+const sendSuccess = (res, code, message, data = null) => {
+  res.status(code).json({
+    code,
+    success: true,
+    message,
+    data,
+  });
+};
+
 exports.createUser = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, companyName } = req.body;
 
-    // Basic validation
     if (!name || !email || !password || !role) {
-      return res.status(400).json({
-        success: false,
-        message: "Name, email, password, and role are required at registration",
-      });
+      return sendError(
+        res,
+        400,
+        "Name, email, password, and role are required"
+      );
     }
 
-    // Check if already registered
     if (await User.findOne({ email })) {
-      return res.status(400).json({
-        success: false,
-        message: "Email already registered",
-      });
+      return sendError(res, 400, "Email already registered");
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
+    const userData = { name, email, password: hashedPassword, role };
 
-    // Create role-based user data
-    const userData = {
-      name,
-      email,
-      password: hashedPassword,
-      role,
-    };
-
-    if (role === "jobSeeker") {
-      userData.jobSeeker = {}; // Empty, user will update later
+    if (role === "jobSeeker") userData.jobSeeker = {};
+    // Only add company if companyName present
+    if (role === "employer" && companyName) {
+      userData.company = { name: companyName };
     }
 
-    if (role === "employer") {
-      userData.company = {}; // Empty, employer will update later
-    }
-
-    // Create user
     const user = new User(userData);
     await user.save();
 
-    res.status(201).json({
-      success: true,
-      message: "User registered",
+    return sendSuccess(res, 201, "User registered", {
       userId: user.userId,
-      role: user.role,
       email: user.email,
+      role: user.role,
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    // Optionally: If err.name==='ValidationError', attach err.message to details
+    return sendError(res, 500, "Registration failed", err.message);
   }
 };
 
-// Login and issue JWT
 exports.loginUser = async (req, res) => {
   try {
     const { email, password, role } = req.body;
+
     if (!email || !password)
-      return res
-        .status(400)
-        .json({ success: false, message: "Email & Password required" });
+      return sendError(res, 400, "Email & Password required");
 
     const user = await User.findOne({ email });
-    if (!user)
-      return res
-        .status(400)
-        .json({ success: false, message: "User not found" });
+    if (!user) return sendError(res, 400, "User not found");
 
-    if (!(await bcrypt.compare(password, user.password)))
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid credentials" });
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (!passwordMatch) return sendError(res, 400, "Invalid credentials");
 
-    // If role is specified (e.g. login as employer), check matches; otherwise ignore
-    if (role && user.role !== role)
-      return res.status(403).json({ success: false, message: "Role mismatch" });
+    if (role && user.role !== role) return sendError(res, 403, "Role mismatch");
 
-    const token = jwt.sign(
+    const accessToken = jwt.sign(
       { userId: user.userId, role: user.role, email: user.email },
       process.env.JWT_SECRET || "my-secret",
       { expiresIn: "1h" }
     );
 
-    res.json({
-      success: true,
-      message: "Login successful",
-      token,
+    const refreshToken = jwt.sign(
+      { userId: user.userId },
+      process.env.JWT_SECRET || "my-secret",
+      { expiresIn: "7d" }
+    );
+
+    return sendSuccess(res, 200, "Login successful", {
+      accessToken,
+      refreshToken,
       user: {
-        userId: user.userId,
-        name: user.name,
-        email: user.email,
-        role: user.role,
+        userId: user.userId ?? null,
+        name: user.name ?? null,
+        email: user.email ?? null,
+        role: user.role ?? null,
+        phone: user.phone ?? null,
+        profileImage: user.profileImage ?? null,
+        address: user.address ?? null,
+        company: user.company ?? null,
+        jobSeeker: user.jobSeeker ?? null,
+        createdAt: user.createdAt ?? null,
+        updatedAt: user.updatedAt ?? null,
       },
     });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+  } catch (error) {
+    return sendError(res, 500, "Login failed", error.message);
   }
 };
 
-// Logout (for JWT: let frontend delete token; optionally store/revoke token server-side if using refresh tokens)
 exports.logoutUser = async (req, res) => {
-  res.status(200).json({ success: true, message: "Logged out" });
+  return sendSuccess(res, 200, "Logged out");
 };
 
-// Get any user by userId (protected: self or admin)
 exports.getUserById = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    // Only allow self or admin
-    if (req.user.userId !== userId && req.user.role !== "admin")
-      return res.status(403).json({ success: false, message: "Access denied" });
+    if (req.user.userId !== userId && req.user.role !== "admin") {
+      return sendError(res, 403, "Access denied");
+    }
 
     const user = await User.findOne({ userId });
-    if (!user)
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
+    if (!user) return sendError(res, 404, "User not found");
 
-    res.json({ success: true, user }); // JSON cleanup handled by model
+    return sendSuccess(res, 200, "User fetched", user);
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    return sendError(res, 500, "Failed to fetch user", err.message);
   }
 };
 
-// Update user profile (only self or admin can update)
 exports.updateUserProfile = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    if (req.user.userId !== userId && req.user.role !== "admin")
-      return res.status(403).json({ success: false, message: "Access denied" });
+    if (req.user.userId !== userId && req.user.role !== "admin") {
+      return sendError(res, 403, "Access denied");
+    }
 
     const updateData = { ...req.body, updatedAt: new Date() };
-    delete updateData.email; // Cannot update email
+    delete updateData.email;
 
-    // ✅ Avoid conflict by embedding profileLastUpdated inside jobSeeker if it exists
     if (updateData.jobSeeker) {
       updateData.jobSeeker.profileLastUpdated = new Date();
     }
@@ -151,43 +151,40 @@ exports.updateUserProfile = async (req, res) => {
       { new: true, runValidators: true }
     );
 
-    if (!updated)
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
+    if (!updated) return sendError(res, 404, "User not found");
 
-    res.json({ success: true, message: "Profile updated", user: updated });
+    return sendSuccess(res, 200, "Profile updated", updated);
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    return sendError(res, 500, "Failed to update profile", err.message);
   }
 };
 
-// Delete user (only self or admin)
 exports.deleteUser = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    if (req.user.userId !== userId && req.user.role !== "admin")
-      return res.status(403).json({ success: false, message: "Access denied" });
+    if (req.user.userId !== userId && req.user.role !== "admin") {
+      return sendError(res, 403, "Access denied");
+    }
 
     const deletedUser = await User.findOneAndDelete({ userId });
-    if (!deletedUser)
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
+    if (!deletedUser) return sendError(res, 404, "User not found");
 
-    res.json({ success: true, message: "User deleted" });
+    return sendSuccess(res, 200, "User deleted");
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    return sendError(res, 500, "Failed to delete user", err.message);
   }
 };
 
-// List all users (admin only)
 exports.listUsers = async (req, res) => {
   try {
+    if (req.user.role !== "admin") {
+      return sendError(res, 403, "Only admin can access this");
+    }
+
     const users = await User.find();
-    res.json({ success: true, users });
+    return sendSuccess(res, 200, "User list fetched", users);
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    return sendError(res, 500, "Failed to fetch users", err.message);
   }
 };

@@ -7,7 +7,7 @@ const { v4: uuidv4 } = require("uuid");
 // ==========================
 const CompanySchema = new mongoose.Schema(
   {
-    companyName: { type: String, required: true },
+    name: { type: String, required: true },
     website: String,
     industry: String,
     companyDescription: String,
