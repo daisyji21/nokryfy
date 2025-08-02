@@ -1,123 +1,117 @@
-const mongoose = require('mongoose');
-const User = require('./users');
-const { v4: uuidv4 } = require('uuid'); 
-//const jobSeeker = require('./jobSeeker');
-// Embedded Job Schema
-const JobSchema = new mongoose.Schema({
-  title: { type: String, required: true },
-  description: String,
-  salary: Number,
-  location: String,
-  postedAt: {
-    type: Date,
-    default: Date.now
-  }
-}, { _id: false });
+// models/User.js
+const mongoose = require("mongoose");
+const { v4: uuidv4 } = require("uuid");
 
-const userSchema = new mongoose.Schema({
-    userId: {
-    type: String,
-    default: uuidv4,  // Generate UUID on creation
-    unique: true
-  },
-  name: {type:String, require:true},
-  email: {type:String, require:true, unique:true},
-  password:{type: String, require:true},
-
-role:{
-  type:String,
-  enum: ['admin', 'employer', 'jobSeeker'],
-  default:'jobSeeker'
-},
-phone: {
-  type: String
-},
-profileImage: {
-    type: String,
-    default: "https://static.vecteezy.com/system/resources/previews/026/619/142/original/default-avatar-profile-icon-of-social-media-user-photo-image-vector.jpg"
-},
-
-  address: {
-        street: { type: String },
-        city: { type: String },
-        state: { type: String },
-        country: { type: String },
-        pincode: { type: String }
+// ==========================
+// Company (Employer) Details
+// ==========================
+const CompanySchema = new mongoose.Schema(
+  {
+    companyName: { type: String, required: true },
+    website: String,
+    industry: String,
+    companyDescription: String,
+    numberOfEmployees: Number,
+    logoUrl: {
+      type: String,
+      default:
+        "https://static.vecteezy.com/system/resources/previews/026/619/142/original/default-avatar-profile-icon-of-social-media-user-photo-image-vector.jpg",
     },
-    //jobseeker
-    jobSeeker:{
-education: {
-  degree: {type:String},
-  passout:String
-
-},
-
- profilesummary:{ type: String},
-resumeLink:{
-  type:String
-}, 
-noticeperiod:{ type: String},
-currentsalary:{
-  type:String,
-  
-},
- employementstatus:{ 
-  type: String,
-  enum: [ "Fresher","Employed", "Unemployed"],
-   default:'Fresher'
- 
- },
-resumeheadline:{type: String },
-IT_Skills:{ type:String},
-softSkills :{
-  type:String
-},
-projects: { type:String},
-Achievement:{ type: String},
-profileLastUpdated:{
-  updateAt: { type: Date }
- 
-},
-PersonalDetail:{
-  type: String
-},
-
-createdAt: {
-  type: Date,
-  default: Date.now
-}
+    address: {
+      street: String,
+      city: String,
+      state: String,
+      country: String,
+      pincode: String,
     },
-    //employer specific
-      
-  employer: {
-    companyName: String,
-    numberOfVacancies: Number,
-    salary: Number,
     isHiring: { type: Boolean, default: true },
-    jobs: [JobSchema]
+    createdAt: { type: Date, default: Date.now },
   },
+  { _id: false }
+);
 
-  createdAt: {
-    type: Date,
-    default: Date.now
+// =========================
+// Job Seeker Details
+// =========================
+const JobSeekerSchema = new mongoose.Schema(
+  {
+    education: [
+      {
+        degree: String,
+        institution: String,
+        passout: String,
+        fieldOfStudy: String,
+      },
+    ],
+    profileSummary: String,
+    resumeLink: String,
+    noticePeriod: String,
+    currentSalary: String,
+    employmentStatus: {
+      type: String,
+      enum: ["Fresher", "Employed", "Unemployed"],
+      default: "Fresher",
+    },
+    resumeHeadline: String,
+    skills: [String], // Both technical and soft skills in one array for searchability
+    projects: [
+      {
+        name: String,
+        description: String,
+        link: String,
+        technologies: [String],
+      },
+    ],
+    achievements: String,
+    profileLastUpdated: Date,
+    personalDetail: String,
+    createdAt: { type: Date, default: Date.now },
   },
-  updatedAt: {
-    type: Date,
-    default: Date.now
-  }
+  { _id: false }
+);
+
+// ==========================
+// Main User Schema
+// ==========================
+const userSchema = new mongoose.Schema({
+  userId: { type: String, default: uuidv4, unique: true },
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  role: {
+    type: String,
+    enum: ["admin", "employer", "jobSeeker"],
+    default: "jobSeeker",
+  },
+  phone: String,
+  profileImage: {
+    type: String,
+    default:
+      "https://static.vecteezy.com/system/resources/previews/026/619/142/original/default-avatar-profile-icon-of-social-media-user-photo-image-vector.jpg",
+  },
+  address: {
+    street: String,
+    city: String,
+    state: String,
+    country: String,
+    pincode: String,
+  },
+  company: CompanySchema, // Employer fields
+  jobSeeker: JobSeekerSchema, // Jobseeker fields
+
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now },
 });
 
-
-userSchema.set('toJSON', {
-  transform: function (doc, ret, options) {
-    //  ret.userId = ret._id;
-         ret.userId = ret.userId || ret._id;  // Assign userId from UUID (or fallback _id)
-    delete ret._id;                      
-     
-    delete ret.password;  // Remove password field
-    delete ret.__v;       // Remove __v field (version key)
+// Output cleanup (hide internals/sensitive)
+userSchema.set("toJSON", {
+  transform: function (doc, ret) {
+    ret.userId = ret.userId || ret._id;
+    delete ret._id;
+    delete ret.password;
+    delete ret.__v;
     return ret;
-  }
+  },
 });
 
-module.exports = mongoose.model('User', userSchema);
+module.exports = mongoose.model("User", userSchema);
